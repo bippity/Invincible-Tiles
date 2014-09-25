@@ -29,10 +29,14 @@ namespace InvincibleTiles
 			return ids;
 		}
 
-		public static string IDToList(this List<int> ids)
+		public static string IDToDBString(this List<int> ids)
 		{
-			String.Format(",", ids);
-			return "s";
+			List<string> strList = new List<string>();
+			foreach (var id in ids)
+			{
+				strList.Add(id.ToString());
+			}
+			return String.Format(",", strList);
 		}
 
 		public static bool IsBanned(this Dictionary<string, List<int>> list, int x, int y, int id)

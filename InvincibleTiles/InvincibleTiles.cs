@@ -170,7 +170,7 @@ namespace InvincibleTiles
 				query = "INSERT INTO BlacklistedTiles (ID, Type, Region) VALUES (@0,@1,@2);";
 			}
 
-			if (db.Query(query, String.Format(",", blacklistedTiles[region]), 0, region) != 1)
+			if (db.Query(query, blacklistedTiles[region].IDToDBString(), 0, region) != 1)
 			{
 				Log.ConsoleError("Inserting into the database has failed!");
 				args.Player.SendMessage(String.Format("Inserting into the database has failed!", id), Color.Red);
@@ -212,7 +212,7 @@ namespace InvincibleTiles
 				return;
 			}
 
-			if (db.Query(query, String.Format(",", blacklistedTiles[region]), 0, region) != 1)
+			if (db.Query(query, blacklistedTiles[region].IDToDBString(), 0, region) != 1)
 			{
 				Log.ConsoleError("Removing from the database has failed!");
 				args.Player.SendMessage(String.Format("Removing from the database has failed!  Are you sure {0} is banned?", id), Color.Red);
@@ -255,7 +255,7 @@ namespace InvincibleTiles
 				query = "INSERT INTO BlacklistedTiles (ID, Type, Region) VALUES (@0,@1,@2);";
 			}
 
-			if (db.Query(query, blacklistedWalls[region], 1) != 1)
+			if (db.Query(query, blacklistedWalls[region].IDToDBString(), 1) != 1)
 			{
 				Log.ConsoleError("Inserting into the database has failed!");
 				args.Player.SendMessage(String.Format("Inserting into the database has failed!", id), Color.Red);
@@ -297,7 +297,7 @@ namespace InvincibleTiles
 				return;
 			}
 
-			if (db.Query(query, blacklistedWalls[region], 1) != 1)
+			if (db.Query(query, blacklistedTiles[region].IDToDBString(), 1) != 1)
 			{
 				Log.ConsoleError("Removing from the database has failed!");
 				args.Player.SendMessage(String.Format("Removing from the database has failed!  Are you sure {0} is banned?", id), Color.Red);
