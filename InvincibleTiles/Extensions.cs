@@ -36,7 +36,7 @@ namespace InvincibleTiles
 			{
 				strList.Add(id.ToString());
 			}
-			return String.Format(",", strList);
+			return String.Join(",", strList);
 		}
 
 		public static bool IsBanned(this Dictionary<string, List<int>> list, int x, int y, int id)
