@@ -149,7 +149,6 @@ namespace InvincibleTiles
 			string region = "";
 			if (args.Parameters.Count > 1)
 			{
-				Console.WriteLine(TShock.Regions.GetRegionByName(args.Parameters[1]).Name);
 				region = TShock.Regions.GetRegionByName(args.Parameters[1]).Name;
 			}
 			if (!int.TryParse(tile, out id))
@@ -159,7 +158,7 @@ namespace InvincibleTiles
 			}
 
 			String query;
-			if (blacklistedTiles.ContainsKey(region))
+			if (blacklistedTiles.ContainsKey(region) && !blacklistedTiles[region].Contains(id))
 			{
 				blacklistedTiles[region].Add(id);
 				query = "UPDATE BlacklistedTiles SET ID = @0 WHERE Type = @1 AND Region = @2";
@@ -201,7 +200,7 @@ namespace InvincibleTiles
 				return;
 			}
 			String query;
-			if (blacklistedTiles.ContainsKey(region))
+			if (blacklistedTiles.ContainsKey(region) && blacklistedTiles[region].Contains(id))
 			{
 				blacklistedTiles[region].Remove(id);
 				query = "UPDATE BlacklistedTiles SET ID = @0 WHERE Type = @1 AND Region = @2";
@@ -220,6 +219,12 @@ namespace InvincibleTiles
 			else
 			{
 				args.Player.SendMessage(String.Format("Successfully unbanned {0}", id), Color.Green);
+			}
+
+			if (blacklistedTiles[region].Count < 1)
+			{
+				db.Query("DELETE FROM BlacklistedTiles WHERE Type = @0 AND Region = @1", 0, region);
+				blacklistedTiles.Remove(region);
 			}
 		}
 
@@ -244,7 +249,7 @@ namespace InvincibleTiles
 			}
 
 			String query;
-			if (blacklistedTiles.ContainsKey(region))
+			if (blacklistedWalls.ContainsKey(region) && !blacklistedWalls[region].Contains(id))
 			{
 				blacklistedWalls[region].Add(id);
 				query = "UPDATE BlacklistedTiles SET ID = @0 WHERE Type = @1 AND Region = @2";
@@ -255,7 +260,7 @@ namespace InvincibleTiles
 				query = "INSERT INTO BlacklistedTiles (ID, Type, Region) VALUES (@0,@1,@2);";
 			}
 
-			if (db.Query(query, blacklistedWalls[region].IDToDBString(), 1) != 1)
+			if (db.Query(query, blacklistedWalls[region].IDToDBString(), 1, region) != 1)
 			{
 				Log.ConsoleError("Inserting into the database has failed!");
 				args.Player.SendMessage(String.Format("Inserting into the database has failed!", id), Color.Red);
@@ -286,7 +291,7 @@ namespace InvincibleTiles
 				return;
 			}
 			String query;
-			if (blacklistedWalls.ContainsKey(region))
+			if (blacklistedWalls.ContainsKey(region) && blacklistedWalls[region].Contains(id))
 			{
 				blacklistedWalls[region].Remove(id);
 				query = "UPDATE BlacklistedTiles SET ID = @0 WHERE Type = @1 AND Region = @2";
@@ -297,7 +302,7 @@ namespace InvincibleTiles
 				return;
 			}
 
-			if (db.Query(query, blacklistedTiles[region].IDToDBString(), 1) != 1)
+			if (db.Query(query, blacklistedWalls[region].IDToDBString(), 1, region) != 1)
 			{
 				Log.ConsoleError("Removing from the database has failed!");
 				args.Player.SendMessage(String.Format("Removing from the database has failed!  Are you sure {0} is banned?", id), Color.Red);
@@ -305,6 +310,12 @@ namespace InvincibleTiles
 			else
 			{
 				args.Player.SendMessage(String.Format("Successfully unbanned {0}", id), Color.Green);
+			}
+
+			if (blacklistedWalls[region].Count < 1)
+			{
+				db.Query("DELETE FROM BlacklistedTiles WHERE Type = @0 AND Region = @1", 1, region);
+				blacklistedWalls.Remove(region);
 			}
 		}
 
