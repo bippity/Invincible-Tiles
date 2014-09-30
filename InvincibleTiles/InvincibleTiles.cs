@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Data;
 using System.IO;
 using Mono.Data.Sqlite;
@@ -16,11 +17,13 @@ namespace InvincibleTiles
 	{
 		private Dictionary<string, List<int>> blacklistedTiles = new Dictionary<string, List<int>>();
 		private Dictionary<string, List<int>> blacklistedWalls = new Dictionary<string, List<int>>();
+		private Dictionary<string, List<int>> blacklistedWires = new Dictionary<string, List<int>>();
 		private IDbConnection db;
 
+		#region Info
 		public override Version Version
 		{
-			get { return new Version("1.0"); }
+			get { return Assembly.GetExecutingAssembly().GetName().Version; }
 		}
 
 		public override string Name
@@ -37,6 +40,7 @@ namespace InvincibleTiles
 		{
 			get { return "Makes certain tiles indestructable"; }
 		}
+		#endregion
 
 		public InvincibleTiles(Main game)
 			: base(game)
@@ -47,10 +51,12 @@ namespace InvincibleTiles
 
 		public override void Initialize()
 		{
-			Commands.ChatCommands.Add(new Command("blackTile", AddTile, "blacktile", "bt"));
-			Commands.ChatCommands.Add(new Command("whiteTile", DelTile, "whitetile", "wt"));
-			Commands.ChatCommands.Add(new Command("blackWall", AddWall, "blackwall", "bw"));
-			Commands.ChatCommands.Add(new Command("whiteWall", DelWall, "whitewall", "ww"));
+			Commands.ChatCommands.Add(new Command("it.blackTile", AddTile, "blacktile", "bt"));
+			Commands.ChatCommands.Add(new Command("it.whiteTile", DelTile, "whitetile", "wt"));
+			Commands.ChatCommands.Add(new Command("it.blackWall", AddWall, "blackwall", "bw"));
+			Commands.ChatCommands.Add(new Command("it.whiteWall", DelWall, "whitewall", "ww"));
+			Commands.ChatCommands.Add(new Command("it.blackWire", AddWire, "blackwire", "bwi"));
+			Commands.ChatCommands.Add(new Command("it.whiteWire", DelWire, "whitewire", "wwi"));
 			GetDataHandlers.TileEdit += TileKill;
 		}
 
@@ -120,9 +126,13 @@ namespace InvincibleTiles
 				{
 					blacklistedTiles.Add(region, id.ToIDList());
 				}
-				else
+				else if (type == 1)
 				{
 					blacklistedWalls.Add(region, id.ToIDList());
+				}
+				else if (type == 2)
+				{
+					blacklistedWires.Add(region, id.ToIDList());
 				}
 			}
 		}
@@ -137,6 +147,7 @@ namespace InvincibleTiles
 			base.Dispose(disposing);
 		}
 
+		#region AddTile
 		private void AddTile(CommandArgs args)
 		{
 			if (args.Parameters.Count < 1)
@@ -179,7 +190,9 @@ namespace InvincibleTiles
 				args.Player.SendMessage(String.Format("Successfully banned {0}", id), Color.Red);
 			}
 		}
+		#endregion
 
+		#region DelTile
 		private void DelTile(CommandArgs args)
 		{
 			if (args.Parameters.Count < 1)
@@ -227,7 +240,9 @@ namespace InvincibleTiles
 				blacklistedTiles.Remove(region);
 			}
 		}
+		#endregion
 
+		#region AddWall
 		private void AddWall(CommandArgs args)
 		{
 			if (args.Parameters.Count < 1)
@@ -270,7 +285,9 @@ namespace InvincibleTiles
 				args.Player.SendMessage(String.Format("Successfully banned {0}", id), Color.Red);
 			}
 		}
+		#endregion
 
+		#region DelWall
 		private void DelWall(CommandArgs args)
 		{
 			if (args.Parameters.Count < 1)
@@ -318,7 +335,104 @@ namespace InvincibleTiles
 				blacklistedWalls.Remove(region);
 			}
 		}
+		#endregion
 
+		#region AddWire
+		private void AddWire(CommandArgs args)
+		{
+			if (args.Parameters.Count < 1)
+			{
+				args.Player.SendMessage("You must specify a wire to add.", Color.Red);
+				return;
+			}
+			string tile = args.Parameters[0];
+			int id;
+			string region = "";
+			if (args.Parameters.Count > 1)
+			{
+				region = TShock.Regions.GetRegionByName(args.Parameters[1]).Name;
+			}
+			if (!int.TryParse(tile, out id))
+			{
+				args.Player.SendMessage(String.Format("Wire id '{0}' is not a valid number.", id), Color.Red);
+				return;
+			}
+
+			String query;
+			if (blacklistedWires.ContainsKey(region) && !blacklistedWires[region].Contains(id))
+			{
+				blacklistedWires[region].Add(id);
+				query = "UPDATE BlacklistedTiles SET ID = @0 WHERE Type = @1 AND Region = @2";
+			}
+			else
+			{
+				blacklistedWires.Add(region, new List<int>() { id });
+				query = "INSERT INTO BlacklistedTiles (ID, Type, Region) VALUES (@0,@1,@2);";
+			}
+
+			if (db.Query(query, blacklistedWires[region].IDToDBString(), 2, region) != 1)
+			{
+				Log.ConsoleError("Inserting into the database has failed!");
+				args.Player.SendMessage(String.Format("Inserting into the database has failed!", id), Color.Red);
+			}
+			else
+			{
+				args.Player.SendMessage(String.Format("Successfully banned {0}", id), Color.Red);
+			}
+		}
+		#endregion
+
+		#region DelWire
+		private void DelWire(CommandArgs args)
+		{
+			if (args.Parameters.Count < 1)
+			{
+				args.Player.SendMessage("You must specify a wire to remove.", Color.Red);
+				return;
+			}
+			string tile = args.Parameters[0];
+			int id;
+			string region = "";
+			if (args.Parameters.Count > 1)
+			{
+				region = TShock.Regions.GetRegionByName(args.Parameters[1]).Name;
+			}
+			if (!int.TryParse(tile, out id))
+			{
+				args.Player.SendMessage(String.Format("Wall id '{0}' is not a valid number.", id), Color.Red);
+				return;
+			}
+			String query;
+			if (blacklistedWires.ContainsKey(region) && blacklistedWires[region].Contains(id))
+			{
+				blacklistedWires[region].Remove(id);
+				query = "UPDATE BlacklistedTiles SET ID = @0 WHERE Type = @1 AND Region = @2";
+			}
+			else
+			{
+				args.Player.SendErrorMessage("{0} is not banned!", id);
+				return;
+			}
+
+			if (db.Query(query, blacklistedWires[region].IDToDBString(), 2, region) != 1)
+			{
+				Log.ConsoleError("Removing from the database has failed!");
+				args.Player.SendMessage(String.Format("Removing from the database has failed!  Are you sure {0} is banned?", id), Color.Red);
+			}
+			else
+			{
+				args.Player.SendMessage(String.Format("Successfully unbanned {0}", id), Color.Green);
+			}
+
+			if (blacklistedWires[region].Count < 1)
+			{
+				db.Query("DELETE FROM BlacklistedTiles WHERE Type = @0 AND Region = @1", 1, region);
+				blacklistedWires.Remove(region);
+			}
+		}
+		#endregion
+
+		#region TileKill
 		private void TileKill(object sender, GetDataHandlers.TileEditEventArgs args)
 		{
 			if (args.Player.Group.HasPermission("breakinvincible"))
@@ -326,16 +440,19 @@ namespace InvincibleTiles
 
 			var wall = Main.tile[args.X, args.Y].wall;
 			var type = Main.tile[args.X, args.Y].type;
-			if (args.Action == GetDataHandlers.EditAction.KillWall && blacklistedWalls.IsBanned(args.X, args.Y, wall))
-			{
-				args.Handled = true;
-				TSPlayer.All.SendTileSquare(args.X, args.Y, 1);
-			}
-			else if ((args.Action == GetDataHandlers.EditAction.KillTile || args.Action == GetDataHandlers.EditAction.KillTileNoItem || args.Action == GetDataHandlers.EditAction.PoundTile) && blacklistedTiles.IsBanned(args.X, args.Y, type))
+
+			if (
+				(args.Action == GetDataHandlers.EditAction.KillWall && blacklistedWalls.IsBanned(args.X, args.Y, wall)) ||
+				((args.Action == GetDataHandlers.EditAction.KillTile || args.Action == GetDataHandlers.EditAction.KillTileNoItem || args.Action == GetDataHandlers.EditAction.PoundTile) && blacklistedTiles.IsBanned(args.X, args.Y, type)) ||
+				(args.Action == GetDataHandlers.EditAction.KillWire && blacklistedWires.IsBanned(args.X, args.Y, 1)) ||
+				(args.Action == GetDataHandlers.EditAction.KillWire2 && blacklistedWires.IsBanned(args.X, args.Y, 2)) ||
+				(args.Action == GetDataHandlers.EditAction.KillWire3 && blacklistedWires.IsBanned(args.X, args.Y, 3))
+				)
 			{
 				args.Handled = true;
 				TSPlayer.All.SendTileSquare(args.X, args.Y, 1);
 			}
 		}
+		#endregion
 	}
 }

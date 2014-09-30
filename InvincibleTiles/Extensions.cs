@@ -39,20 +39,17 @@ namespace InvincibleTiles
 			return String.Join(",", strList);
 		}
 
-		public static bool IsBanned(this Dictionary<string, List<int>> list, int x, int y, int id)
+		public static bool IsBanned(this Dictionary<string, List<int>> blacklisted, int x, int y, int id)
 		{
-			List<string> regions = TShock.Regions.InAreaRegionName(x, y);
-			if (regions.Count < 1)
+			string region = "";
+			Region r = TShock.Regions.GetTopRegion(TShock.Regions.InAreaRegion(x, y));
+			if (r != null)
 			{
-				regions.Add("");
+				region = r.Name;
 			}
-
-			foreach (string region in regions)
+			if (blacklisted.ContainsKey(region) && blacklisted[region].Contains(id))
 			{
-				if (list.ContainsKey(region) && list[region].Contains(id))
-				{
-					return true;
-				}
+				return true;
 			}
 			return false;
 		}
